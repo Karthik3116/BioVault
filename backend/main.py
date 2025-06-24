@@ -588,6 +588,13 @@ async def authenticate_face(
         raise HTTPException(status_code=401, detail={"message": "Face verification failed."})
 
     return JSONResponse(status_code=200, content={"status": "verified"})
+
+@app.get("/")
+def health():
+    return {"message": "FastAPI is running!"}
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
+    
+    port = int(os.environ.get("PORT", 10000))  # Render sets the PORT env
     uvicorn.run("main:app", host="0.0.0.0", port=port)
+
