@@ -1,0 +1,4 @@
+conda create --prefix E:\conda_envs\faceathon=3.9 -y
+conda activate E:\conda_envs\faceauth
+uvicorn main:app --reload
+uvicorn main:app --host 0.0.0.0 --port 5000 --reload

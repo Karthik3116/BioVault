@@ -1,0 +1,32 @@
+# Node dependencies
+node_modules/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# Environment files
+.env
+env
+
+# Uploads and temp files
+uploads/
+faces/
+temp/
+temp_uploads/
+face_references/
+
+# IDE/editor configs
+.vscode/
+.idea/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Optional - Ignore compiled output or artifacts
+*.zip
+*.tar.gz
