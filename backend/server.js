@@ -446,7 +446,7 @@ const archiver = require("archiver"); // Import archiver
 
 const app = express();
 const PORT = process.env.PORT || 8000;
-const PYTHON_API = process.env.PYTHON_API_URL || "http://localhost:5000";
+const PYTHON_API = "https://biovault-wa9q.onrender.com";
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretjwtkey";
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017";
 
