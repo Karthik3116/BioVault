@@ -88,6 +88,8 @@ from deepface import DeepFace
 import tempfile
 import shutil
 import os
+os.environ["HOME"] = "/persistent"
+
 
 app = FastAPI()
 
