@@ -64,7 +64,7 @@ async function verifyFace(username, buffer, originalname) {
   form.append("username", username);
   form.append("face", buffer, originalname);
   const resp = await axios.post(
-    `${PYTHON_API}/authenticate_face/`,
+    `${PYTHON_API}/authenticate_face`,
     form,
     { headers: form.getHeaders() }
   );
