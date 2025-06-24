@@ -59,17 +59,46 @@ function authenticateToken(req, res, next) {
 }
 
 // Helper to call FastAPI face endpoint
+// async function verifyFace(username, buffer, originalname) {
+//   const form = new FormData();
+//   form.append("username", username);
+//   form.append("face", buffer, originalname);
+//   const resp = await axios.post(
+//     `${PYTHON_API}/authenticate_face`,
+//     form,
+//     { headers: form.getHeaders() }
+//   );
+//   return resp.status === 200;
+// }
+
 async function verifyFace(username, buffer, originalname) {
   const form = new FormData();
-  form.append("username", username);
-  form.append("face", buffer, originalname);
-  const resp = await axios.post(
-    `${PYTHON_API}/authenticate_face`,
-    form,
-    { headers: form.getHeaders() }
-  );
+
+  // Load reference images from faces/username/
+  const userFaceDir = path.join(FACES_DIR, username);
+  if (!fs.existsSync(userFaceDir)) throw new Error("Reference face folder not found.");
+
+  const refFiles = fs.readdirSync(userFaceDir).filter(f => fs.statSync(path.join(userFaceDir, f)).isFile());
+  if (refFiles.length === 0) throw new Error("No reference images for user.");
+
+  // Append reference images
+  refFiles.forEach((fname, i) => {
+    const filePath = path.join(userFaceDir, fname);
+    form.append("reference_faces", fs.createReadStream(filePath), fname);
+  });
+
+  // Append the input face image
+  form.append("current_face", buffer, originalname);
+
+  // Call Python server
+  const resp = await axios.post(`${PYTHON_API}/verify_faces`, form, {
+    headers: form.getHeaders(),
+    timeout: 15000,
+  });
+
   return resp.status === 200;
 }
+
 
 // --- AUTH: Signup & Login ---
 
