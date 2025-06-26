@@ -558,7 +558,9 @@ export default function FaceManager({ setIsLoggedIn }) {
       attemptCount++;
       setIsRedirecting(true);
       try {
-        navigate('/library');
+        const sessionId = Math.random().toString(36).substring(2, 8);
+        navigate(`/library/${sessionId}`);
+
       } catch {
         if (attemptCount < 3) {
           redirectTimer = setTimeout(attemptRedirect, 1000 * attemptCount);

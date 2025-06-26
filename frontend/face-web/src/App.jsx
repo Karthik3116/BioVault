@@ -75,68 +75,141 @@
 //     );
 // }
 
+// import React, { useState, useEffect } from 'react';
+// import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+// import LoginPage from './LoginPage';
+// import SignupPage from './SignupPage';
+// import FaceManager from './FaceManager';
+// import LibraryPage from './Library';
+
+// export default function App() {
+//     const [isLoggedIn, setIsLoggedIn] = useState(() => {
+//         const token = localStorage.getItem('jwtToken');
+//         return !!token;
+//     });
+
+//     const [username, setUsername] = useState(() => {
+//         return localStorage.getItem('username') || '';
+//     });
+
+//     useEffect(() => {
+//         if (!isLoggedIn) {
+//             localStorage.removeItem('jwtToken');
+//             localStorage.removeItem('username');
+//             localStorage.removeItem('lastVerifiedFace');
+//             localStorage.removeItem('faceVerified');
+//         }
+//     }, [isLoggedIn]);
+
+//     return (
+//         <Router>
+//             <Routes>
+//                 <Route
+//                     path="/login"
+//                     element={<LoginPage setIsLoggedIn={setIsLoggedIn} setUsername={setUsername} />}
+//                 />
+//                 <Route
+//                     path="/signup"
+//                     element={<SignupPage />}
+//                 />
+//                 <Route
+//                     path="/vault"
+//                     element={
+//                         isLoggedIn ? (
+//                             <FaceManager username={username} setIsLoggedIn={setIsLoggedIn} />
+//                         ) : (
+//                             <Navigate to="/login" />
+//                         )
+//                     }
+//                 />
+//                 <Route
+//                     path="/library"
+//                     element={
+//                         isLoggedIn ? (
+//                             <LibraryPage username={username} setIsLoggedIn={setIsLoggedIn} />
+//                         ) : (
+//                             <Navigate to="/vault" />
+//                         )
+//                     }
+//                 />
+//                 <Route
+//                     path="*"
+//                     element={<Navigate to={isLoggedIn ? "/vault" : "/login"} />}
+//                 />
+//             </Routes>
+//         </Router>
+//     );
+// }
+// App.jsx
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate
+} from 'react-router-dom';
 import LoginPage from './LoginPage';
 import SignupPage from './SignupPage';
 import FaceManager from './FaceManager';
 import LibraryPage from './Library';
 
 export default function App() {
-    const [isLoggedIn, setIsLoggedIn] = useState(() => {
-        const token = localStorage.getItem('jwtToken');
-        return !!token;
-    });
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return !!localStorage.getItem('jwtToken');
+  });
+  const [username, setUsername] = useState(() => {
+    return localStorage.getItem('username') || '';
+  });
 
-    const [username, setUsername] = useState(() => {
-        return localStorage.getItem('username') || '';
-    });
+  useEffect(() => {
+    if (!isLoggedIn) {
+      localStorage.removeItem('jwtToken');
+      localStorage.removeItem('username');
+      localStorage.removeItem('lastVerifiedFace');
+      localStorage.removeItem('faceVerified');
+    }
+  }, [isLoggedIn]);
 
-    useEffect(() => {
-        if (!isLoggedIn) {
-            localStorage.removeItem('jwtToken');
-            localStorage.removeItem('username');
-            localStorage.removeItem('lastVerifiedFace');
-            localStorage.removeItem('faceVerified');
-        }
-    }, [isLoggedIn]);
+  return (
+    <Router>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <LoginPage
+              setIsLoggedIn={setIsLoggedIn}
+              setUsername={setUsername}
+            />
+          }
+        />
+        <Route path="/signup" element={<SignupPage />} />
 
-    return (
-        <Router>
-            <Routes>
-                <Route
-                    path="/login"
-                    element={<LoginPage setIsLoggedIn={setIsLoggedIn} setUsername={setUsername} />}
-                />
-                <Route
-                    path="/signup"
-                    element={<SignupPage />}
-                />
-                <Route
-                    path="/vault"
-                    element={
-                        isLoggedIn ? (
-                            <FaceManager username={username} setIsLoggedIn={setIsLoggedIn} />
-                        ) : (
-                            <Navigate to="/login" />
-                        )
-                    }
-                />
-                <Route
-                    path="/library"
-                    element={
-                        isLoggedIn ? (
-                            <LibraryPage username={username} setIsLoggedIn={setIsLoggedIn} />
-                        ) : (
-                            <Navigate to="/vault" />
-                        )
-                    }
-                />
-                <Route
-                    path="*"
-                    element={<Navigate to={isLoggedIn ? "/vault" : "/login"} />}
-                />
-            </Routes>
-        </Router>
-    );
+        {/* FaceManager stays on /vault */}
+        <Route
+          path="/vault"
+          element={
+            isLoggedIn
+              ? <FaceManager setIsLoggedIn={setIsLoggedIn} />
+              : <Navigate to="/login" />
+          }
+        />
+
+        {/* Library now takes a dynamic segment */}
+        <Route
+          path="/library/:sessionId"
+          element={
+            isLoggedIn
+              ? <LibraryPage setIsLoggedIn={setIsLoggedIn} />
+              : <Navigate to="/vault" />
+          }
+        />
+
+        {/* Fallback */}
+        <Route
+          path="*"
+          element={<Navigate to={isLoggedIn ? "/vault" : "/login"} />}
+        />
+      </Routes>
+    </Router>
+  );
 }
