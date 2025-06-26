@@ -15,7 +15,7 @@ const archiver = require("archiver"); // Import archiver
 
 const app = express();
 const PORT = process.env.PORT || 8000;
-const PYTHON_API = "https://biovault-wa9q.onrender.com";
+const PYTHON_API = "https://karthik3116-deepface-api.hf.space";
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretjwtkey";
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017";
 
@@ -93,7 +93,7 @@ async function verifyFace(username, buffer, originalname) {
   // Call Python server
   const resp = await axios.post(`${PYTHON_API}/verify_faces`, form, {
     headers: form.getHeaders(),
-    timeout: 15000,
+    timeout: 60000,
   });
 
   return resp.status === 200;
@@ -463,6 +463,10 @@ app.post('/api/verify_face', authenticateToken, upload.single('face'), async (re
     console.error('Face verification error:', e);
     return res.status(500).json({ status: 'fail', message: 'Face verification failed' });
   }
+});
+
+app.get("/", (req, res) => {
+  res.send("hello");
 });
 
 app.listen(PORT, () => {
