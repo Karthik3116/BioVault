@@ -11,11 +11,11 @@
 //   User,
 //   Lock,
 //   AlertTriangle,
-//   Info
+//   Info,
+//   ArrowRight
 // } from 'lucide-react';
 // import { useNavigate } from 'react-router-dom';
 
-// // Utility: Blob → Base64
 // const blobToBase64 = (blob) =>
 //   new Promise((res, rej) => {
 //     const reader = new FileReader();
@@ -27,7 +27,6 @@
 //     reader.readAsDataURL(blob);
 //   });
 
-// // FaceScanner overlay
 // const FaceScanner = () => (
 //   <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-2xl z-10">
 //     <div className="relative">
@@ -46,7 +45,7 @@
 //   </div>
 // );
 
-// export default function FaceManager({ username, setIsLoggedIn }) {
+// export default function FaceManager({ setIsLoggedIn }) {
 //   const [mode, setMode] = useState('access');
 //   const [dataFiles, setDataFiles] = useState([]);
 //   const [showModal, setShowModal] = useState(false);
@@ -56,15 +55,68 @@
 //   const [isProcessing, setIsProcessing] = useState(false);
 //   const [processingMessage, setProcessingMessage] = useState('');
 //   const [authFailed, setAuthFailed] = useState(false);
+//   const [verificationSuccess, setVerificationSuccess] = useState(false);
+//   const [countdown, setCountdown] = useState(5);
+//   const [isRedirecting, setIsRedirecting] = useState(false);
 
 //   const videoRef = useRef(null);
 //   const canvasRef = useRef(null);
 //   const fileInputRef = useRef(null);
 //   const navigate = useNavigate();
-
 //   const API_BASE = import.meta.env.VITE_API_BASE;
 
-// ;
+//   // grab username from localStorage instead of a missing prop
+//   const username = localStorage.getItem('username') || 'Unknown User';
+
+//   // Redirect logic with retries
+//   useEffect(() => {
+//     let redirectTimer;
+//     let countdownInterval;
+//     let attemptCount = 0;
+
+//     const attemptRedirect = () => {
+//       attemptCount++;
+//       setIsRedirecting(true);
+//       try {
+//         const sessionId = Math.random().toString(36).substring(2, 8);
+//         navigate(`/library/${sessionId}`);
+
+//       } catch {
+//         if (attemptCount < 3) {
+//           redirectTimer = setTimeout(attemptRedirect, 1000 * attemptCount);
+//         }
+//       }
+//     };
+
+//     const startCountdown = () => {
+//       countdownInterval = setInterval(() => {
+//         setCountdown(prev => {
+//           if (prev <= 1) {
+//             clearInterval(countdownInterval);
+//             return 0;
+//           }
+//           return prev - 1;
+//         });
+//       }, 1000);
+//     };
+
+//     if (verificationSuccess && mode === 'access' && !isRedirecting) {
+//       startCountdown();
+//       redirectTimer = setTimeout(attemptRedirect, 500);
+//       return () => {
+//         clearTimeout(redirectTimer);
+//         clearInterval(countdownInterval);
+//         setIsRedirecting(false);
+//       };
+//     }
+//   }, [verificationSuccess, mode, navigate, isRedirecting]);
+
+//   // Reset when mode changes
+//   useEffect(() => {
+//     setVerificationSuccess(false);
+//     setCountdown(5);
+//   }, [mode]);
+
 //   const modes = [
 //     {
 //       value: 'upload',
@@ -83,26 +135,26 @@
 //       accent: 'border-white'
 //     }
 //   ];
-//   const currentMode = modes.find((m) => m.value === mode);
+//   const currentMode = modes.find(m => m.value === mode);
 
 //   const displayMessage = useCallback((msg, type = 'info', title = '') => {
 //     setModalContent({
-//       title: title || (type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Information'),
+//       title: title || (type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info'),
 //       message: msg,
 //       type
 //     });
 //     setShowModal(true);
 //   }, []);
 
-//   // Camera logic
+//   // Camera setup/cleanup
 //   useEffect(() => {
 //     let stream;
 //     if (cameraOn) {
 //       navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-//         .then((s) => {
+//         .then(s => {
 //           stream = s;
 //           videoRef.current.srcObject = s;
-//           return new Promise((r) => videoRef.current.onloadedmetadata = r);
+//           return new Promise(r => videoRef.current.onloadedmetadata = r);
 //         })
 //         .then(() => setCameraOn(true))
 //         .catch(() => {
@@ -110,12 +162,10 @@
 //           setCameraOn(false);
 //         });
 //     } else {
-//       if (videoRef.current?.srcObject) {
-//         videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
-//       }
-//       videoRef.current && (videoRef.current.srcObject = null);
+//       videoRef.current?.srcObject?.getTracks().forEach(t => t.stop());
+//       if (videoRef.current) videoRef.current.srcObject = null;
 //     }
-//     return () => stream?.getTracks().forEach((t) => t.stop());
+//     return () => stream?.getTracks().forEach(t => t.stop());
 //   }, [cameraOn, displayMessage]);
 
 //   const captureBlob = async () => {
@@ -126,85 +176,72 @@
 //     can.height = vid.videoHeight;
 //     can.getContext('2d').drawImage(vid, 0, 0);
 //     return new Promise((res, rej) =>
-//       can.toBlob((b) => (b ? res(b) : rej(new Error('Capture failed'))), 'image/jpeg', 0.9)
+//       can.toBlob(b => b ? res(b) : rej(new Error('Capture failed')), 'image/jpeg', 0.9)
 //     );
 //   };
 
 //   const getToken = () => localStorage.getItem('jwtToken');
 //   const authHeader = () => ({ Authorization: `Bearer ${getToken()}` });
 
-//   const verifyFace = async (capturedBlob) => {
-//   try {
-//     const form = new FormData();
-//     form.append('face', capturedBlob, 'face.jpg');
-    
-//     const response = await fetch(`${API_BASE}/api/verify_face`, {
-//       method: 'POST',
-//       headers: authHeader(), // JWT will be sent here
-//       body: form
-//     });
-    
-//     const data = await response.json();
-//     return data.status === 'success';
-//   } catch (error) {
-//     console.error('Face verification error:', error);
-//     return false;
-//   }
-// };
+//   const verifyFace = async (blob) => {
+//     try {
+//       const form = new FormData();
+//       form.append('face', blob, 'face.jpg');
+//       const res = await fetch(`${API_BASE}/api/verify_face`, {
+//         method: 'POST',
+//         headers: authHeader(),
+//         body: form
+//       });
+//       const json = await res.json();
+//       return json.status === 'success';
+//     } catch {
+//       return false;
+//     }
+//   };
 
 //   const prepareAndRun = async (actionFn) => {
 //     if (!getToken()) {
 //       displayMessage('Please log in first.', 'error', 'Auth Required');
 //       return navigate('/login');
 //     }
-
-//     // Start processing flow
 //     setIsProcessing(true);
 //     setAuthFailed(false);
+//     setVerificationSuccess(false);
+//     setCountdown(5);
 //     setProcessingMessage('Initializing camera...');
 //     setCameraOn(true);
-    
+
 //     try {
-//       // Wait for camera to initialize
-//       await new Promise((resolve) => {
-//         const checkReady = () => {
-//           if (videoRef.current?.readyState === 4) {
-//             resolve();
-//           } else {
-//             setTimeout(checkReady, 100);
-//           }
+//       // wait video ready
+//       await new Promise(r => {
+//         const check = () => {
+//           if (videoRef.current?.readyState === 4) r();
+//           else setTimeout(check, 100);
 //         };
-//         checkReady();
+//         check();
 //       });
 
-//       // Start scanning animation
 //       setProcessingMessage('Scanning face...');
 //       setIsScanning(true);
-//       await new Promise((r) => setTimeout(r, 1500));
+//       await new Promise(r => setTimeout(r, 1500));
 
-//       // Capture face
 //       setProcessingMessage('Capturing image...');
 //       const faceBlob = await captureBlob();
 
-//       // Verify face before proceeding
 //       setProcessingMessage('Verifying identity...');
-//       const isVerified = await verifyFace(faceBlob);
-      
-//       if (!isVerified) {
+//       const ok = await verifyFace(faceBlob);
+
+//       if (!ok) {
 //         setAuthFailed(true);
-//         throw new Error('Face authentication failed. Please try again.');
+//         throw new Error('Face authentication failed.');
 //       }
 
-//       // Process with backend if verification succeeded
+//       setVerificationSuccess(true);
 //       await actionFn(faceBlob);
 
 //     } catch (e) {
-//       if (!authFailed) {
-//         displayMessage(e.message || 'Operation failed.', 'error');
-//       }
-//       throw e;
+//       if (!authFailed) displayMessage(e.message || 'Operation failed.', 'error');
 //     } finally {
-//       // Cleanup
 //       setIsProcessing(false);
 //       setIsScanning(false);
 //       setCameraOn(false);
@@ -213,57 +250,44 @@
 //   };
 
 //   const handleSubmit = async () => {
+//     if (mode === 'upload') {
+//       if (!dataFiles.length) return displayMessage('Select files first.', 'error');
+//       await prepareAndRun(async blob => {
+//         const form = new FormData();
+//         form.append('face', blob, 'face.jpg');
+//         dataFiles.forEach(f => form.append('user_files', f, f.name));
+//         form.append('current_folder', '');
+//         const res = await fetch(`${API_BASE}/api/vault/upload`, {
+//           method: 'POST', headers: authHeader(), body: form
+//         });
+//         const json = await res.json();
+//         if (!res.ok) throw new Error(json.message);
+//         displayMessage(json.message, 'success');
+//         setDataFiles([]);
+//         fileInputRef.current.value = '';
+//       });
+//     } else {
+//       await prepareAndRun(async blob => {
+//         const form = new FormData();
+//         form.append('face', blob, 'face.jpg');
+//         form.append('path', '');
+//         const res = await fetch(`${API_BASE}/api/vault/access`, {
+//           method: 'POST', headers: authHeader(), body: form
+//         });
+//         const json = await res.json();
+//         if (!res.ok) throw new Error(json.message);
+//         localStorage.setItem('lastVerifiedFace', await blobToBase64(blob));
+//         localStorage.setItem('faceVerified', 'true');
+//         displayMessage('Access granted, redirecting…', 'success');
+//       });
+//     }
+//   };
+
+//   const handleManualNavigate = () => {
 //     try {
-//       if (mode === 'upload') {
-//         if (!dataFiles.length) {
-//           return displayMessage('Select files first.', 'error');
-//         }
-//         await prepareAndRun(async (faceBlob) => {
-//           const form = new FormData();
-//           form.append('face', faceBlob, 'face.jpg');
-//           dataFiles.forEach((f) => form.append('user_files', f, f.name));
-//           form.append('current_folder', '');
-          
-//           const res = await fetch(`${API_BASE}/api/vault/upload`, {
-//             method: 'POST',
-//             headers: authHeader(),
-//             body: form
-//           });
-          
-//           const json = await res.json();
-//           if (!res.ok) throw new Error(json.message);
-          
-//           displayMessage(json.message, 'success');
-//           setDataFiles([]);
-//           fileInputRef.current.value = '';
-//         });
-//       } else {
-//         await prepareAndRun(async (faceBlob) => {
-//           const form = new FormData();
-//           form.append('face', faceBlob, 'face.jpg');
-//           form.append('path', '');
-          
-//           const res = await fetch(`${API_BASE}/api/vault/access`, {
-//             method: 'POST',
-//             headers: authHeader(),
-//             body: form
-//           });
-          
-//           const json = await res.json();
-//           if (!res.ok) throw new Error(json.message);
-          
-//           localStorage.setItem('lastVerifiedFace', await blobToBase64(faceBlob));
-//           displayMessage('Access granted. Redirecting...', 'success');
-          
-//           // Small delay before navigation for better UX
-//           setTimeout(() => navigate('/library'), 1500);
-//         });
-//       }
-//     } catch (error) {
-//       if (authFailed) {
-//         displayMessage('Authentication failed. Please try again.', 'error', 'Verification Failed');
-//       }
-//       console.error('Operation failed:', error);
+//       navigate('/library');
+//     } catch {
+//       displayMessage('Navigation failed. Please refresh.', 'error');
 //     }
 //   };
 
@@ -292,6 +316,9 @@
 //         .btn-action {
 //           @apply flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-xl hover:from-blue-600 hover:to-purple-600 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed;
 //         }
+//         .btn-success {
+//           @apply flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold bg-green-600 text-white shadow-lg hover:bg-green-700 transition duration-200;
+//         }
 //         .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
 //         .custom-scrollbar::-webkit-scrollbar-track { background: #2a2c30; border-radius: 10px; }
 //         .custom-scrollbar::-webkit-scrollbar-thumb { background: #555; border-radius: 10px; }
@@ -311,7 +338,6 @@
 //             Biometric Vault
 //           </h1>
 
-//           {/* Navbar */}
 //           <div className="flex justify-between items-center bg-gray-800/50 rounded-xl p-4 mb-8">
 //             <span className="flex items-center gap-2 text-xl text-gray-300">
 //               <User size={20} /> {username}
@@ -321,7 +347,6 @@
 //             </button>
 //           </div>
 
-//           {/* Mode Selection */}
 //           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
 //             {modes.map((m) => (
 //               <button
@@ -332,6 +357,7 @@
 //                   setCameraOn(false);
 //                   setIsProcessing(false);
 //                   setIsScanning(false);
+//                   setVerificationSuccess(false);
 //                   fileInputRef.current && (fileInputRef.current.value = '');
 //                 }}
 //                 className={`p-4 rounded-xl bg-gradient-to-br ${m.gradient} hover:scale-105 transform ${
@@ -346,7 +372,6 @@
 //             ))}
 //           </div>
 
-//           {/* Content */}
 //           <div className="bg-gray-800/60 rounded-2xl p-6 flex-grow overflow-y-auto custom-scrollbar space-y-6">
 //             <div className="flex justify-between items-center mb-4">
 //               <h2 className="flex items-center gap-2 text-2xl text-blue-300">
@@ -360,7 +385,6 @@
 //               )}
 //             </div>
 
-//             {/* Camera Feed */}
 //             <div className="relative aspect-video bg-gray-900 rounded-xl overflow-hidden border border-gray-700 shadow-lg flex items-center justify-center">
 //               {cameraOn ? (
 //                 <>
@@ -382,7 +406,6 @@
 //               )}
 //             </div>
 
-//             {/* Mode-specific UI */}
 //             {mode === 'upload' ? (
 //               <div className="space-y-4">
 //                 <input
@@ -411,41 +434,49 @@
 //                 <p className="text-gray-400 mb-4">
 //                   Click below to verify and enter your vault.
 //                 </p>
-//                 <button
-//   onClick={handleSubmit}
-//   className="
-//     relative /* Added for spinner positioning */
-//     btn-action /* Your existing class, ensure it sets basic styles */
-//     w-full
-//     py-3 /* Increased padding for better appearance */
-//     bg-blue-600 hover:bg-blue-700 /* Vibrant blue with darker hover */
-//     text-white /* White text for contrast */
-//     font-semibold /* Slightly bolder text */
-//     rounded-lg /* Nice rounded corners */
-//     shadow-md hover:shadow-lg /* Subtle shadow for depth */
-//     transition-all duration-300 ease-in-out /* Smooth transitions for color and shadow */
-//     flex items-center justify-center gap-2 /* For icon and text alignment */
-//     overflow-hidden /* Hide overflow for potential future effects */
-//   "
-//   disabled={isProcessing}
-// >
-//   {isProcessing ? (
-//     <>
-//       {/* Lucide Loader2 icon for a smooth spinner */}
-//       <Loader2 size={20} className="animate-spin" />
-//       <span className="ml-2">Processing...</span>
-//     </>
-//   ) : (
-//     <span>Access Vault</span>
-//   )}
-// </button>
+//                 {verificationSuccess && !isProcessing ? (
+//                   <div className="space-y-4">
+//                     <div className="p-4 bg-green-900/30 rounded-lg border border-green-600">
+//                       <p className="text-green-300">Verification successful!</p>
+//                       {countdown > 0 ? (
+//                         <p className="text-sm text-green-400 mt-1">
+//                           Redirecting in {countdown} second{countdown !== 1 ? 's' : ''}...
+//                         </p>
+//                       ) : (
+//                         <p className="text-sm text-green-400 mt-1">
+//                           Automatic redirect failed. Please click below:
+//                         </p>
+//                       )}
+//                     </div>
+//                     <button
+//                       onClick={handleManualNavigate}
+//                       className="btn-success w-full"
+//                     >
+//                       <ArrowRight size={20} /> {countdown > 0 ? `(${countdown})` : ''} Go to Library
+//                     </button>
+//                   </div>
+//                 ) : (
+//                   <button
+//                     onClick={handleSubmit}
+//                     className="btn-action w-full"
+//                     disabled={isProcessing}
+//                   >
+//                     {isProcessing ? (
+//                       <>
+//                         <Loader2 size={20} className="animate-spin" />
+//                         <span className="ml-2">Processing...</span>
+//                       </>
+//                     ) : (
+//                       <span>Access Vault</span>
+//                     )}
+//                   </button>
+//                 )}
 //               </div>
 //             )}
 //           </div>
 //         </div>
 //       </div>
 
-//       {/* Modal */}
 //       {showModal && (
 //         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
 //           <div className={`bg-gray-800 p-6 rounded-xl text-center space-y-4 max-w-sm w-full transform scale-95 animate-scale-in border ${
@@ -479,6 +510,8 @@
 //     </div>
 //   );
 // }
+
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Camera,
@@ -534,7 +567,6 @@ export default function FaceManager({ setIsLoggedIn }) {
   const [isScanning, setIsScanning] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingMessage, setProcessingMessage] = useState('');
-  const [authFailed, setAuthFailed] = useState(false);
   const [verificationSuccess, setVerificationSuccess] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -545,10 +577,9 @@ export default function FaceManager({ setIsLoggedIn }) {
   const navigate = useNavigate();
   const API_BASE = import.meta.env.VITE_API_BASE;
 
-  // grab username from localStorage instead of a missing prop
   const username = localStorage.getItem('username') || 'Unknown User';
 
-  // Redirect logic with retries
+  // Redirect logic
   useEffect(() => {
     let redirectTimer;
     let countdownInterval;
@@ -560,7 +591,6 @@ export default function FaceManager({ setIsLoggedIn }) {
       try {
         const sessionId = Math.random().toString(36).substring(2, 8);
         navigate(`/library/${sessionId}`);
-
       } catch {
         if (attemptCount < 3) {
           redirectTimer = setTimeout(attemptRedirect, 1000 * attemptCount);
@@ -591,7 +621,6 @@ export default function FaceManager({ setIsLoggedIn }) {
     }
   }, [verificationSuccess, mode, navigate, isRedirecting]);
 
-  // Reset when mode changes
   useEffect(() => {
     setVerificationSuccess(false);
     setCountdown(5);
@@ -626,7 +655,6 @@ export default function FaceManager({ setIsLoggedIn }) {
     setShowModal(true);
   }, []);
 
-  // Camera setup/cleanup
   useEffect(() => {
     let stream;
     if (cameraOn) {
@@ -663,36 +691,18 @@ export default function FaceManager({ setIsLoggedIn }) {
   const getToken = () => localStorage.getItem('jwtToken');
   const authHeader = () => ({ Authorization: `Bearer ${getToken()}` });
 
-  const verifyFace = async (blob) => {
-    try {
-      const form = new FormData();
-      form.append('face', blob, 'face.jpg');
-      const res = await fetch(`${API_BASE}/api/verify_face`, {
-        method: 'POST',
-        headers: authHeader(),
-        body: form
-      });
-      const json = await res.json();
-      return json.status === 'success';
-    } catch {
-      return false;
-    }
-  };
-
   const prepareAndRun = async (actionFn) => {
     if (!getToken()) {
       displayMessage('Please log in first.', 'error', 'Auth Required');
       return navigate('/login');
     }
     setIsProcessing(true);
-    setAuthFailed(false);
     setVerificationSuccess(false);
     setCountdown(5);
     setProcessingMessage('Initializing camera...');
     setCameraOn(true);
 
     try {
-      // wait video ready
       await new Promise(r => {
         const check = () => {
           if (videoRef.current?.readyState === 4) r();
@@ -708,19 +718,11 @@ export default function FaceManager({ setIsLoggedIn }) {
       setProcessingMessage('Capturing image...');
       const faceBlob = await captureBlob();
 
-      setProcessingMessage('Verifying identity...');
-      const ok = await verifyFace(faceBlob);
-
-      if (!ok) {
-        setAuthFailed(true);
-        throw new Error('Face authentication failed.');
-      }
-
-      setVerificationSuccess(true);
+      setProcessingMessage(mode === 'access' ? 'Accessing vault...' : 'Uploading files...');
       await actionFn(faceBlob);
-
+      setVerificationSuccess(true);
     } catch (e) {
-      if (!authFailed) displayMessage(e.message || 'Operation failed.', 'error');
+      displayMessage(e.message || 'Operation failed.', 'error');
     } finally {
       setIsProcessing(false);
       setIsScanning(false);
@@ -732,7 +734,7 @@ export default function FaceManager({ setIsLoggedIn }) {
   const handleSubmit = async () => {
     if (mode === 'upload') {
       if (!dataFiles.length) return displayMessage('Select files first.', 'error');
-      await prepareAndRun(async blob => {
+      await prepareAndRun(async (blob) => {
         const form = new FormData();
         form.append('face', blob, 'face.jpg');
         dataFiles.forEach(f => form.append('user_files', f, f.name));
@@ -741,13 +743,13 @@ export default function FaceManager({ setIsLoggedIn }) {
           method: 'POST', headers: authHeader(), body: form
         });
         const json = await res.json();
-        if (!res.ok) throw new Error(json.message);
+        if (!res.ok) throw new Error(json.message || 'Upload failed');
         displayMessage(json.message, 'success');
         setDataFiles([]);
         fileInputRef.current.value = '';
       });
     } else {
-      await prepareAndRun(async blob => {
+      await prepareAndRun(async (blob) => {
         const form = new FormData();
         form.append('face', blob, 'face.jpg');
         form.append('path', '');
@@ -755,7 +757,7 @@ export default function FaceManager({ setIsLoggedIn }) {
           method: 'POST', headers: authHeader(), body: form
         });
         const json = await res.json();
-        if (!res.ok) throw new Error(json.message);
+        if (!res.ok) throw new Error(json.message || 'Access failed');
         localStorage.setItem('lastVerifiedFace', await blobToBase64(blob));
         localStorage.setItem('faceVerified', 'true');
         displayMessage('Access granted, redirecting…', 'success');
@@ -776,7 +778,6 @@ export default function FaceManager({ setIsLoggedIn }) {
     setIsLoggedIn(false);
     navigate('/login');
   };
-
   return (
     <div className="fixed inset-0 flex flex-col bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white">
       <style jsx>{`
